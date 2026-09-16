@@ -1,6 +1,8 @@
+import { SETTING_COOKIE, SETTING_COOKIE_OPTIONS } from "@/lib/cookies";
 import type { TSettingState } from "@/types/state.type";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import { createSlice } from "@reduxjs/toolkit";
+import { getCookie, setCookie } from "cookies-next/client";
 
 const defaultSetting: TSettingState = {
   theme: "system",
@@ -16,12 +18,16 @@ const getInitialSetting = (): TSettingState => {
     return defaultSetting;
   }
   try {
-    const setting = localStorage.getItem("setting");
+    const setting = getCookie(SETTING_COOKIE);
     return setting ? JSON.parse(setting) : defaultSetting;
   } catch (error) {
-    console.error("Error parsing user from localStorage", error);
+    console.error("Error parsing setting from cookies", error);
     return defaultSetting;
   }
+};
+
+const persistSetting = (setting: TSettingState) => {
+  setCookie(SETTING_COOKIE, JSON.stringify(setting), SETTING_COOKIE_OPTIONS);
 };
 
 const initialState: TSettingState = getInitialSetting();
@@ -33,43 +39,43 @@ export const settingSlice = createSlice({
     setSetting: (state, action: PayloadAction<TSettingState>) => {
       if (action.payload) {
         const setting = { ...state, ...action.payload };
-        localStorage.setItem("setting", JSON.stringify(setting));
+        persistSetting(setting);
         return setting;
       }
       return state;
     },
     updateTheme: (state, action: PayloadAction<TSettingState["theme"]>) => {
       state.theme = action.payload;
-      localStorage.setItem("setting", JSON.stringify(state));
+      persistSetting(state);
     },
     updateDirection: (
       state,
       action: PayloadAction<TSettingState["direction"]>,
     ) => {
       state.direction = action.payload;
-      localStorage.setItem("setting", JSON.stringify(state));
+      persistSetting(state);
     },
     updateLanguage: (
       state,
       action: PayloadAction<TSettingState["language"]>,
     ) => {
       state.language = action.payload;
-      localStorage.setItem("setting", JSON.stringify(state));
+      persistSetting(state);
     },
     updateSidebar: (state, action: PayloadAction<TSettingState["sidebar"]>) => {
       state.sidebar = action.payload;
-      localStorage.setItem("setting", JSON.stringify(state));
+      persistSetting(state);
     },
     updateHeader: (state, action: PayloadAction<TSettingState["header"]>) => {
       state.header = action.payload;
-      localStorage.setItem("setting", JSON.stringify(state));
+      persistSetting(state);
     },
     updateLayout: (state, action: PayloadAction<TSettingState["layout"]>) => {
       state.layout = action.payload;
-      localStorage.setItem("setting", JSON.stringify(state));
+      persistSetting(state);
     },
     resetSetting: () => {
-      localStorage.setItem("setting", JSON.stringify(defaultSetting));
+      persistSetting(defaultSetting);
       return defaultSetting;
     },
   },

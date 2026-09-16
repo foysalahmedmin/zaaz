@@ -1,4 +1,5 @@
 import { ENV } from "@/config";
+import { AUTH_COOKIE_OPTIONS, USER_COOKIE } from "@/lib/cookies";
 import { refreshToken } from "@/services/auth.service";
 import type { TUserState } from "@/types/state.type";
 import type {
@@ -8,6 +9,7 @@ import type {
   InternalAxiosRequestConfig,
 } from "axios";
 import axios from "axios";
+import { deleteCookie, getCookie, setCookie } from "cookies-next/client";
 
 let isRefreshing = false;
 
@@ -35,7 +37,7 @@ const api: AxiosInstance = axios.create({
 
 // ✅ Request Interceptor
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const userString = localStorage.getItem("user");
+  const userString = getCookie(USER_COOKIE);
   let user: TUserState | null = null;
 
   try {
@@ -57,8 +59,8 @@ api.interceptors.response.use(
   async (error: AxiosError): Promise<AxiosResponse | never> => {
     if (error.response?.status === 403) {
       console.warn("403 Forbidden: Logging out...");
-      localStorage.removeItem("user");
-      window.location.href = "/auth/signin";
+      deleteCookie(USER_COOKIE, { path: AUTH_COOKIE_OPTIONS.path });
+      window.location.href = "/signin";
       return Promise.reject(error);
     }
 
@@ -68,8 +70,8 @@ api.interceptors.response.use(
 
     if (originalRequest.url === "/api/auth/refresh-token") {
       console.warn("Refresh token request failed. Logging out...");
-      localStorage.removeItem("user");
-      window.location.href = "/auth/signin";
+      deleteCookie(USER_COOKIE, { path: AUTH_COOKIE_OPTIONS.path });
+      window.location.href = "/signin";
       return Promise.reject(error);
     }
 
@@ -98,9 +100,10 @@ api.interceptors.response.use(
         }
 
         console.log("Token refreshed successfully.");
-        localStorage.setItem(
-          "user",
+        setCookie(
+          USER_COOKIE,
           JSON.stringify({ is_authenticated: true, ...data }),
+          AUTH_COOKIE_OPTIONS,
         );
 
         api.defaults.headers.Authorization = `Bearer ${data?.token}`;
@@ -110,8 +113,8 @@ api.interceptors.response.use(
       } catch (error: unknown) {
         console.error("Token refresh failed. Logging out...", error);
         processQueue(error, null);
-        localStorage.removeItem("user");
-        window.location.href = "/auth/signin";
+        deleteCookie(USER_COOKIE, { path: AUTH_COOKIE_OPTIONS.path });
+        window.location.href = "/signin";
         return Promise.reject(error);
       } finally {
         isRefreshing = false;

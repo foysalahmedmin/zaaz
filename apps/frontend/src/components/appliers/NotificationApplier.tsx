@@ -1,10 +1,12 @@
 "use client";
 
 import useNotification from "@/hooks/states/useNotification";
+import { USER_COOKIE } from "@/lib/cookies";
 import { fetchNotificationRecipientsBySelf } from "@/services/notification-recipient.service";
 import type { TNotificationRecipient } from "@/types/notification-recipient";
 import type { TUserState } from "@/types/state.type";
 import { useQuery } from "@tanstack/react-query";
+import { getCookie } from "cookies-next/client";
 import { useEffect } from "react";
 import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
@@ -33,7 +35,7 @@ const NotificationApplier = () => {
   }, [data, setNotifications, setUnread, setTotal]);
 
   useEffect(() => {
-    const userString = localStorage.getItem("user");
+    const userString = getCookie(USER_COOKIE);
     const user: TUserState | null = userString
       ? (JSON.parse(userString) as TUserState)
       : null;
