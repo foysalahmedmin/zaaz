@@ -1,0 +1,20 @@
+import type { TPackagePrice } from "./package.type";
+import type { TPlan } from "./plan.type";
+import type { TResponse } from "./response.type";
+
+export type TPackagePlan = {
+  _id: string;
+  interval: TPlan | string;
+  package: string | { _id: string; name: string; [key: string]: any };
+  previous_price?: TPackagePrice;
+  price: TPackagePrice;
+  credits: number;
+  is_initial: boolean;
+  is_active: boolean;
+  is_deleted?: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type TPackagePlanResponse = TResponse<TPackagePlan>;
+export type TPackagePlansResponse = TResponse<TPackagePlan[]>;

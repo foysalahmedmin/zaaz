@@ -1,0 +1,20 @@
+import type { TResponse } from "./response.type";
+
+export type TPaymentMethod = {
+  _id: string;
+  name: string;
+  value: string;
+  currencies: string[];
+  description?: string;
+  config?: Record<string, unknown>;
+  is_test?: boolean;
+  is_recurring: boolean;
+  sequence?: number;
+  is_active: boolean;
+  is_deleted?: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type TPaymentMethodResponse = TResponse<TPaymentMethod>;
+export type TPaymentMethodsResponse = TResponse<TPaymentMethod[]>;
