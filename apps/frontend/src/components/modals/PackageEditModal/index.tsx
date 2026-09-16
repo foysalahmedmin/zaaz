@@ -1,0 +1,743 @@
+"use client";
+
+import BlockNoteEditor from "@/components/ui/BlockNoteEditor";
+import { Button } from "@/components/ui/Button";
+import { FormControl } from "@/components/ui/FormControl";
+import { Modal } from "@/components/ui/Modal";
+import { fetchFeatures } from "@/services/feature.service";
+import { updatePackage } from "@/services/package.service";
+import { fetchPlans } from "@/services/plan.service";
+import type { TPackage } from "@/types/package.type";
+import type { TErrorResponse } from "@/types/response.type";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
+import { Loader2, Plus, X } from "lucide-react";
+import React from "react";
+import { Controller, useForm } from "react-hook-form";
+import { toast } from "react-toastify";
+
+type PackageEditModalProps = {
+  default: Partial<TPackage>;
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  className?: string;
+  mutationKey?: string[];
+};
+
+type PackagePlanFormData = {
+  interval: string;
+  priceUSD: number;
+  priceBDT: number;
+  credits: number;
+  is_initial: boolean;
+  is_active: boolean;
+};
+
+type TPackageFormInput = Partial<TPackage> & {
+  packagePlans: PackagePlanFormData[];
+};
+
+// Points Input Component
+type PointsInputProps = {
+  value?: string[];
+  onChange: (value: string[]) => void;
+};
+
+const PointsInput: React.FC<PointsInputProps> = ({ value = [], onChange }) => {
+  const [inputValue, setInputValue] = React.useState("");
+
+  const handleAddPoint = () => {
+    const trimmedValue = inputValue.trim();
+    if (trimmedValue) {
+      if (!value.includes(trimmedValue)) {
+        onChange([...value, trimmedValue]);
+        setInputValue("");
+      }
+    }
+  };
+
+  const handleRemovePoint = (index: number) => {
+    onChange(value.filter((_, i) => i !== index));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleAddPoint();
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <FormControl
+          type="text"
+          placeholder="Enter a point and press Enter or click +"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="flex-1"
+        />
+        <Button
+          className="size-10"
+          type="button"
+          variant="outline"
+          size="sm"
+          shape="icon"
+          onClick={handleAddPoint}
+          disabled={!inputValue.trim()}
+        >
+          <Plus className="size-4" />
+        </Button>
+      </div>
+      {value && value.length > 0 && (
+        <div className="border-input bg-card space-y-2 rounded-md border p-3">
+          {value.map((point) => (
+            <div
+              key={point}
+              className="bg-muted/50 flex items-center justify-between gap-2 rounded px-3 py-2"
+            >
+              <span className="text-sm">{point}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => handleRemovePoint(value.indexOf(point))}
+                className="text-destructive hover:text-destructive h-6 w-6 p-0"
+              >
+                <X className="size-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const PackageEditModal: React.FC<PackageEditModalProps> = ({
+  isOpen,
+  setIsOpen,
+  default: pkg,
+  mutationKey: key = ["packages"],
+}) => {
+  const queryClient = useQueryClient();
+
+  const { data: featuresData } = useQuery({
+    queryKey: ["features"],
+    queryFn: () => fetchFeatures({ sort: "name" }),
+  });
+
+  const { data: plansData } = useQuery({
+    queryKey: ["plans"],
+    queryFn: () => fetchPlans({ is_active: true, sort: "name" }),
+  });
+
+  // Normalize features to string array (extract _id if object array)
+  const normalizeFeatures = (features: any[] | undefined): string[] => {
+    if (!features || !Array.isArray(features)) return [];
+    return features.map((feature) => {
+      if (typeof feature === "string") {
+        return feature;
+      }
+      // If it's an object, extract _id
+      return feature?._id || feature?.id || feature;
+    });
+  };
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    control,
+    formState: { errors },
+  } = useForm<TPackageFormInput>({
+    defaultValues: {
+      value: pkg?.value || "",
+      name: pkg?.name || "",
+      description: pkg?.description || "",
+      content: pkg?.content || "",
+      type: pkg?.type || "credits",
+      badge: pkg?.badge || "",
+      points: pkg?.points || [],
+      features: normalizeFeatures(pkg?.features),
+      packagePlans:
+        pkg?.plans?.map((pp: any) => ({
+          interval: pp.interval?._id || pp.interval || "",
+          priceUSD: pp.price?.USD || 0,
+          priceBDT: pp.price?.BDT || 0,
+          credits: pp.credits || 0,
+          is_initial: pp.is_initial || false,
+          is_active: pp.is_active !== undefined ? pp.is_active : true,
+        })) || [],
+      sequence: pkg?.sequence || 0,
+      is_active: pkg?.is_active ?? true,
+    },
+  });
+
+  React.useEffect(() => {
+    reset({
+      value: pkg?.value || "",
+      name: pkg?.name || "",
+      description: pkg?.description || "",
+      content: pkg?.content || "",
+      type: pkg?.type || "credits",
+      badge: pkg?.badge || "",
+      points: pkg?.points || [],
+      features: normalizeFeatures(pkg?.features),
+      packagePlans:
+        pkg?.plans?.map((pp: any) => ({
+          interval: pp.interval?._id || pp.interval || "",
+          priceUSD: pp.price?.USD || 0,
+          priceBDT: pp.price?.BDT || 0,
+          credits: pp.credits || 0,
+          is_initial: pp.is_initial || false,
+          is_active: pp.is_active !== undefined ? pp.is_active : true,
+        })) || [],
+      sequence: pkg?.sequence || 0,
+      is_active: pkg?.is_active ?? true,
+    });
+  }, [pkg, reset]);
+
+  const selectedFeatures = watch("features") || [];
+  const packagePlans = watch("packagePlans") || [];
+
+  const mutation = useMutation({
+    mutationFn: (data: TPackageFormInput) => {
+      if (!pkg._id) {
+        throw new Error("Package ID is missing");
+      }
+      const payload: any = {
+        plans: data.packagePlans.map((pp) => ({
+          interval: pp.interval,
+          price: {
+            USD: pp.priceUSD,
+            BDT: pp.priceBDT,
+          },
+          credits: pp.credits,
+          is_initial: pp.is_initial,
+          is_active: pp.is_active,
+        })),
+      };
+
+      // Add other fields if they changed
+      if (data.value !== undefined) payload.value = data.value;
+      if (data.name !== undefined) payload.name = data.name;
+      if (data.description !== undefined)
+        payload.description = data.description;
+      if (data.content !== undefined) payload.content = data.content;
+      if (data.type !== undefined) payload.type = data.type;
+      if (data.badge !== undefined) payload.badge = data.badge;
+      if (data.points !== undefined) payload.points = data.points;
+      if (data.features !== undefined) payload.features = data.features;
+      if (data.sequence !== undefined) payload.sequence = data.sequence;
+      if (data.is_active !== undefined) payload.is_active = data.is_active;
+
+      return updatePackage(pkg._id, payload);
+    },
+    onSuccess: (data) => {
+      toast.success(data?.message || "Package updated successfully!");
+      queryClient.invalidateQueries({ queryKey: key || [] });
+      setIsOpen(false);
+    },
+    onError: (error: AxiosError<TErrorResponse>) => {
+      toast.error(error.response?.data?.message || "Failed to update package");
+    },
+  });
+
+  const onSubmit = (data: TPackageFormInput) => {
+    if (!data.packagePlans || data.packagePlans.length === 0) {
+      toast.error("At least one plan is required");
+      return;
+    }
+
+    // Ensure at least one is_initial
+    const hasInitial = data.packagePlans.some((pp) => pp.is_initial);
+    if (!hasInitial) {
+      data.packagePlans[0].is_initial = true;
+    }
+
+    // Ensure only one is_initial
+    const initialCount = data.packagePlans.filter((pp) => pp.is_initial).length;
+    if (initialCount > 1) {
+      toast.error("Only one plan can be marked as 'Initial'.");
+      return;
+    }
+
+    const updatedFields: Partial<TPackageFormInput> = {};
+
+    if (data.value !== pkg.value) updatedFields.value = data.value;
+    if (data.name !== pkg.name) updatedFields.name = data.name;
+    if (data.description !== pkg.description)
+      updatedFields.description = data.description;
+    if (data.content !== pkg.content) updatedFields.content = data.content;
+    if (data.type !== pkg.type) updatedFields.type = data.type;
+    if (data.badge !== pkg.badge) updatedFields.badge = data.badge;
+    if (JSON.stringify(data.points) !== JSON.stringify(pkg.points))
+      updatedFields.points = data.points;
+    if (JSON.stringify(data.features) !== JSON.stringify(pkg.features)) {
+      updatedFields.features = data.features;
+    }
+
+    // Compare plans array for changes
+    const oldPlansSerialized = JSON.stringify(
+      pkg.plans?.map((p) => ({
+        interval: p.interval?._id || p.interval,
+        price: p.price,
+        credits: p.credits,
+        is_initial: p.is_initial,
+        is_active: p.is_active,
+      })) || [],
+    );
+    const newPlansSerialized = JSON.stringify(
+      data.packagePlans.map((p) => ({
+        interval: p.interval,
+        price: { USD: p.priceUSD, BDT: p.priceBDT },
+        credits: p.credits,
+        is_initial: p.is_initial,
+        is_active: p.is_active,
+      })),
+    );
+
+    if (oldPlansSerialized !== newPlansSerialized) {
+      updatedFields.packagePlans = data.packagePlans;
+    }
+
+    if (data.sequence !== pkg.sequence) updatedFields.sequence = data.sequence;
+    if (data.is_active !== pkg.is_active)
+      updatedFields.is_active = data.is_active;
+
+    if (Object.keys(updatedFields).length === 0) {
+      toast.info("No changes detected");
+      return;
+    }
+
+    // If plans changed, send only plans update
+    if (updatedFields.packagePlans) {
+      mutation.mutate({
+        ...data,
+        packagePlans: updatedFields.packagePlans,
+      });
+    } else {
+      // Otherwise send other fields
+      const { packagePlans: _, ...otherFields } = updatedFields;
+      mutation.mutate({
+        ...data,
+        ...otherFields,
+      });
+    }
+  };
+
+  const togglePlan = (planId: string) => {
+    const current = packagePlans;
+    const existingIndex = current.findIndex((pp) => pp.interval === planId);
+
+    if (existingIndex >= 0) {
+      // Remove plan
+      setValue(
+        "packagePlans",
+        current.filter((_, i) => i !== existingIndex),
+      );
+    } else {
+      // Add plan with default values
+      const plan = plansData?.data?.find((p) => p._id === planId);
+      if (plan) {
+        setValue("packagePlans", [
+          ...current,
+          {
+            interval: planId,
+            priceUSD: 0,
+            priceBDT: 0,
+            credits: 0,
+            is_initial: current.length === 0, // First plan is initial
+            is_active: true,
+          },
+        ]);
+      }
+    }
+  };
+
+  const toggleFeature = (featureId: string) => {
+    const current = selectedFeatures;
+    if (current.includes(featureId)) {
+      setValue(
+        "features",
+        current.filter((id) => id !== featureId),
+      );
+    } else {
+      setValue("features", [...current, featureId]);
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} setIsOpen={setIsOpen}>
+      <Modal.Backdrop>
+        <Modal.Content className="max-h-[90vh] max-w-4xl overflow-y-auto">
+          <Modal.Header>
+            <Modal.Title>Edit Package</Modal.Title>
+            <Modal.Close />
+          </Modal.Header>
+
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <Modal.Body className="grid gap-4">
+              <div>
+                <FormControl.Label>Name</FormControl.Label>
+                <FormControl
+                  type="text"
+                  placeholder="Package name"
+                  {...register("name", { required: "Name is required" })}
+                />
+                {errors.name && (
+                  <FormControl.Error>{errors.name.message}</FormControl.Error>
+                )}
+              </div>
+
+              <div>
+                <FormControl.Label>Value</FormControl.Label>
+                <FormControl
+                  type="text"
+                  placeholder="e.g., free, basic, premium"
+                  {...register("value", {
+                    required: "Value is required",
+                    pattern: {
+                      value: /^[a-z0-9_-]+$/,
+                      message:
+                        "Value must be lowercases and can only contain letters, numbers, hyphens, and underscores",
+                    },
+                  })}
+                />
+                {errors.value && (
+                  <FormControl.Error>{errors.value.message}</FormControl.Error>
+                )}
+                <FormControl.Helper>
+                  Unique identifier for the package (lowercase)
+                </FormControl.Helper>
+              </div>
+
+              <div>
+                <FormControl.Label>Description (Optional)</FormControl.Label>
+                <FormControl
+                  as="textarea"
+                  className="h-auto min-h-20 py-2"
+                  placeholder="Package description"
+                  {...register("description")}
+                />
+              </div>
+
+              <div className="hidden">
+                <FormControl.Label>Content (Optional)</FormControl.Label>
+                <Controller
+                  name="content"
+                  control={control}
+                  render={({ field }) => (
+                    <BlockNoteEditor
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </div>
+
+              <div>
+                <FormControl.Label>Type</FormControl.Label>
+                <FormControl as="select" {...register("type")}>
+                  <option value="credits">Credits</option>
+                  <option value="subscription">Subscription</option>
+                </FormControl>
+                <FormControl.Helper>
+                  Select package type (default: Credits)
+                </FormControl.Helper>
+              </div>
+
+              <div>
+                <FormControl.Label>Badge (Optional)</FormControl.Label>
+                <FormControl
+                  type="text"
+                  placeholder="e.g., Popular, Best Value, New"
+                  {...register("badge")}
+                />
+                <FormControl.Helper>
+                  Badge text to display on package card
+                </FormControl.Helper>
+              </div>
+
+              <div>
+                <FormControl.Label>Points (Optional)</FormControl.Label>
+                <FormControl.Helper>
+                  Add key points/benefits one by one
+                </FormControl.Helper>
+                <Controller
+                  name="points"
+                  control={control}
+                  render={({ field }) => (
+                    <PointsInput
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </div>
+
+              <div>
+                <FormControl.Label>Features</FormControl.Label>
+                <div className="border-input bg-card max-h-40 space-y-2 overflow-y-auto rounded-md border p-3">
+                  {featuresData?.data?.map((feature) => (
+                    <label
+                      key={feature._id}
+                      className="flex cursor-pointer items-center gap-2"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedFeatures.includes(feature._id)}
+                        onChange={() => toggleFeature(feature._id)}
+                        className="accent-accent size-4"
+                      />
+                      <span className="text-sm">{feature.name}</span>
+                    </label>
+                  ))}
+                </div>
+                {selectedFeatures.length === 0 && (
+                  <FormControl.Error>
+                    At least one feature is required
+                  </FormControl.Error>
+                )}
+              </div>
+
+              <div>
+                <FormControl.Label>
+                  Plans (Required - At least one)
+                </FormControl.Label>
+                <FormControl.Helper>
+                  Select plans and configure their prices, credits, and
+                  settings.
+                </FormControl.Helper>
+                <div className="border-input bg-card max-h-68 space-y-3 overflow-y-auto rounded-md border p-3">
+                  {plansData?.data?.map((plan) => {
+                    const planData = packagePlans.find(
+                      (pp) => pp.interval === plan._id,
+                    );
+                    const isSelected = !!planData;
+
+                    return (
+                      <div
+                        key={plan._id}
+                        className={`space-y-3 rounded-lg border p-3 ${
+                          isSelected
+                            ? "border-primary bg-primary/5"
+                            : "border-border"
+                        }`}
+                      >
+                        <label className="flex cursor-pointer items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => togglePlan(plan._id)}
+                            className="accent-accent size-4"
+                          />
+                          <span className="font-semibold">
+                            {plan.name} ({plan.duration} days)
+                          </span>
+                        </label>
+
+                        {isSelected && planData && (
+                          <div className="ml-6 grid gap-3 border-t pt-3">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <FormControl.Label>
+                                  Price (USD) *
+                                </FormControl.Label>
+                                <FormControl
+                                  type="number"
+                                  placeholder="0.00"
+                                  min="0"
+                                  step="0.01"
+                                  value={planData.priceUSD}
+                                  onChange={(e) => {
+                                    const updated = [...packagePlans];
+                                    const index = updated.findIndex(
+                                      (pp) => pp.interval === plan._id,
+                                    );
+                                    if (index >= 0) {
+                                      updated[index].priceUSD =
+                                        parseFloat(e.target.value) || 0;
+                                      setValue("packagePlans", updated);
+                                    }
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <FormControl.Label>
+                                  Price (BDT) *
+                                </FormControl.Label>
+                                <FormControl
+                                  type="number"
+                                  placeholder="0.00"
+                                  min="0"
+                                  step="0.01"
+                                  value={planData.priceBDT}
+                                  onChange={(e) => {
+                                    const updated = [...packagePlans];
+                                    const index = updated.findIndex(
+                                      (pp) => pp.interval === plan._id,
+                                    );
+                                    if (index >= 0) {
+                                      updated[index].priceBDT =
+                                        parseFloat(e.target.value) || 0;
+                                      setValue("packagePlans", updated);
+                                    }
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <FormControl.Label>Credits *</FormControl.Label>
+                              <FormControl
+                                type="number"
+                                placeholder="0"
+                                min="0"
+                                value={planData.credits}
+                                onChange={(e) => {
+                                  const updated = [...packagePlans];
+                                  const index = updated.findIndex(
+                                    (pp) => pp.interval === plan._id,
+                                  );
+                                  if (index >= 0) {
+                                    updated[index].credits =
+                                      parseInt(e.target.value) || 0;
+                                    setValue("packagePlans", updated);
+                                  }
+                                }}
+                              />
+                            </div>
+
+                            <div className="flex items-center gap-4">
+                              <label className="inline-flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={planData.is_initial}
+                                  onChange={(e) => {
+                                    const updated = [...packagePlans];
+                                    const index = updated.findIndex(
+                                      (pp) => pp.interval === plan._id,
+                                    );
+                                    if (index >= 0) {
+                                      // Unset other initial plans
+                                      updated.forEach((pp, i) => {
+                                        pp.is_initial =
+                                          i === index
+                                            ? e.target.checked
+                                            : false;
+                                      });
+                                      setValue("packagePlans", updated);
+                                    }
+                                  }}
+                                  className="accent-accent size-4"
+                                />
+                                <span className="text-sm font-medium">
+                                  Initial Plan
+                                </span>
+                              </label>
+                              <label className="inline-flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={planData.is_active}
+                                  onChange={(e) => {
+                                    const updated = [...packagePlans];
+                                    const index = updated.findIndex(
+                                      (pp) => pp.interval === plan._id,
+                                    );
+                                    if (index >= 0) {
+                                      updated[index].is_active =
+                                        e.target.checked;
+                                      setValue("packagePlans", updated);
+                                    }
+                                  }}
+                                  className="accent-accent size-4"
+                                />
+                                <span className="text-sm font-medium">
+                                  Active
+                                </span>
+                              </label>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {packagePlans.length === 0 && (
+                  <FormControl.Error>
+                    At least one plan is required
+                  </FormControl.Error>
+                )}
+                {plansData?.data?.length === 0 && (
+                  <FormControl.Helper>
+                    No active plans available. Create plans first.
+                  </FormControl.Helper>
+                )}
+              </div>
+
+              <div>
+                <FormControl.Label>Sequence</FormControl.Label>
+                <FormControl
+                  type="number"
+                  placeholder="0"
+                  min="0"
+                  {...register("sequence", {
+                    valueAsNumber: true,
+                    min: {
+                      value: 0,
+                      message: "Sequence must be 0 or greater",
+                    },
+                  })}
+                />
+                {errors.sequence && (
+                  <FormControl.Error>
+                    {errors.sequence.message}
+                  </FormControl.Error>
+                )}
+                <FormControl.Helper>
+                  Lower numbers appear first when sorting by sequence
+                </FormControl.Helper>
+              </div>
+
+              <div>
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    className="accent-accent size-5"
+                    type="checkbox"
+                    {...register("is_active")}
+                  />
+                  <span className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Active
+                  </span>
+                </label>
+              </div>
+            </Modal.Body>
+
+            <Modal.Footer>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Update
+              </Button>
+            </Modal.Footer>
+          </form>
+        </Modal.Content>
+      </Modal.Backdrop>
+    </Modal>
+  );
+};
+
+export default PackageEditModal;
