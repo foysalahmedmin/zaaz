@@ -42,15 +42,14 @@ export default function HomePage() {
             Run your business on ZaaZ
           </h1>
           <p className="text-muted-foreground mx-auto mt-4 max-w-2xl text-lg">
-            One platform for billing, credits, and customer management —
-            built to scale with you from your first customer to your
-            millionth.
+            One platform for billing, credits, and customer management — built
+            to scale with you from your first customer to your millionth.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link href="/pricing">
               <Button size="lg">View Pricing</Button>
             </Link>
-            <Link href="/auth/signup">
+            <Link href="/signup">
               <Button size="lg" variant="outline">
                 Create an account
               </Button>
@@ -66,8 +65,8 @@ export default function HomePage() {
             Everything you need, in one place
           </h2>
           <p className="text-muted-foreground mt-3">
-            From onboarding to renewal, ZaaZ handles the operational work so
-            you can focus on your product.
+            From onboarding to renewal, ZaaZ handles the operational work so you
+            can focus on your product.
           </p>
         </div>
 

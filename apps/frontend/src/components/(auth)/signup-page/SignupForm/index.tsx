@@ -7,10 +7,10 @@ import { googleSignIn, signUp } from "@/services/auth.service";
 import type { SignUpPayload } from "@/types/auth.type";
 import { GoogleLogin } from "@react-oauth/google";
 import { Eye, EyeOff, Plus, User } from "lucide-react";
-import React, { useState } from "react";
-import { useForm } from "react-hook-form";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import React, { useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 
 const SignupForm: React.FC = () => {
@@ -251,7 +251,7 @@ const SignupForm: React.FC = () => {
           {/* Signin link */}
           <div className="text-center text-sm">
             Already have an account?{" "}
-            <Link href="/auth/signin" className="underline underline-offset-4">
+            <Link href="/signin" className="underline underline-offset-4">
               Signin
             </Link>
           </div>

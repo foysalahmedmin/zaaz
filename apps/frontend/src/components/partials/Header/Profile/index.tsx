@@ -19,7 +19,7 @@ const Profile: React.FC = () => {
 
   const handleLogout = () => {
     clearUser();
-    router.replace("/auth/signin");
+    router.replace("/signin");
   };
 
   return (

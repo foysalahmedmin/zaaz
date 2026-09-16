@@ -20,7 +20,7 @@ const AuthWrapper: React.FC<PrivateRouteProps> = ({ roles = [], children }) => {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      router.replace(`/auth/signin?from=${encodeURIComponent(pathname)}`);
+      router.replace(`/signin?from=${encodeURIComponent(pathname)}`);
       return;
     }
     if (!isAuthorized) {
