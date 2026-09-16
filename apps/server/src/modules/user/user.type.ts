@@ -1,0 +1,33 @@
+import { Document, Model, Types } from 'mongoose';
+import { TRole } from '../../types/jsonwebtoken.type';
+
+export type TStatus = 'in-progress' | 'blocked';
+export type TAuthSource = 'email' | 'google';
+
+export type TUser = {
+  _id: string | any;
+  image?: string;
+  name: string;
+  email: string;
+  password?: string;
+  password_changed_at?: Date;
+  role: TRole;
+  status: TStatus;
+  auth_source: TAuthSource;
+  google_id?: string;
+  is_verified: boolean;
+  is_deleted: boolean;
+  token_version: number;
+};
+
+export interface TUserDocument extends TUser, Document {
+  _id: Types.ObjectId;
+  softDelete(): Promise<TUserDocument | null>;
+}
+
+export type TUserModel = Model<TUserDocument> & {
+  isUserExist(_id: string): Promise<TUserDocument | null>;
+  isUserExistByEmail(email: string): Promise<TUserDocument | null>;
+};
+
+

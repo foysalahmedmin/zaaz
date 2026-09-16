@@ -1,0 +1,28 @@
+/node_modules
+/dist
+/public
+/uploads
+
+.env
+.vercel
+
+# Google Cloud Storage credentials
+/credentials
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!tsconfig.test.json
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+package-lock.json
+.env*.local
