@@ -8,21 +8,12 @@ This document presents a **fully industry-standard monolithic modular backend ar
 
 ```plaintext
 project-root/
-├─ documents/                # Project documentation
+├─ docs/                     # Project documentation
 │  ├─ apis/                  # API documentation and postman collections
 │  │  ├─ auth_apis/          # Auth module docs & collection
 │  │  └─ user_apis/          # User module docs & collection
-│  ├─ memories/              # History and Architectural Decisions (ADR)
-│  ├─ plans/                 # Detailed feature implementation roadmaps
-│  │  ├─ [feature_name]/     # Example: auth_token_version/
-│  │  │  ├─ plan.md          # Architectural override & strategy
-│  │  │  └─ tasks.md         # Phase-by-phase task list
-│  │  └─ README.md           # Planning guidelines
-│  ├─ project_roles.md       # Development Rules and Guidelines
-│  ├─ project_structure.md   # This file (Source of truth)
-│  └─ project_specification.md # Functional requirements
-├─ infra/                    # Infrastructure & deployment config (Docker, Nginx, etc.)
-├─ public/                   # Static files for frontend distribution (Ignored)
+│  ├─ roles.md               # Development Rules and Guidelines
+│  └─ structure.md           # This file (Source of truth)
 ├─ uploads/                  # Temporary and persistent file uploads (Ignored)
 ├─ dist/                     # Compiled JS output
 ├─ src/                      # Source code
@@ -39,12 +30,10 @@ project-root/
 
 **Explanation:**
 
-- `documents/`: Contains API specifications, architecture diagrams, and other project docs.
-- `infra/`: Contains Dockerfiles, docker-compose configs, Nginx configs, and monitoring setups.
-- `postman_collection/`: Exported Postman JSON files for API testing and documentation.
-- `public/`: Used for compiled frontend assets or public static content.
+- `docs/`: Contains API specifications, architecture diagrams, and other project docs.
 - `uploads/`: Stores media or files uploaded via the application's APIs.
 - `dist/`: Holds compiled TypeScript output.
+- `src/`: Contains the project's source code.
 - `tests/`: Integration or end-to-end tests.
 - `.env.example`: Template for environment configuration.
 - Other root files provide project configurations, linting, formatting, and TypeScript settings.
