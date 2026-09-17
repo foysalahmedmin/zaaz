@@ -12,7 +12,7 @@ project-root/
 │  ├─ apis/                  # API documentation and postman collections
 │  │  ├─ auth_apis/          # Auth module docs & collection
 │  │  └─ user_apis/          # User module docs & collection
-│  ├─ roles.md               # Development Rules and Guidelines
+│  ├─ rules.md               # Development Rules and Guidelines
 │  └─ structure.md           # This file (Source of truth)
 ├─ uploads/                  # Temporary and persistent file uploads (Ignored)
 ├─ dist/                     # Compiled JS output
